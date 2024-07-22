@@ -1,0 +1,1296 @@
+
+
+
+vue.js - Error 422 Unprocessable Entity - Rails API VueJS From - Stack Overflow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Stack Overflow
+
+
+
+About
+
+
+
+						Products
+					
+
+
+For Teams
+
+
+
+
+
+
+
+Stack Overflow
+Public questions & answers
+
+
+
+
+Stack Overflow for Teams
+Where developers & technologists share private knowledge with coworkers
+
+
+
+
+Talent
+
+								Build your employer brand
+							
+
+
+
+
+Advertising
+Reach developers & technologists worldwide
+
+
+
+About the company
+
+
+
+
+
+
+
+
+
+
+
+Loading…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+current community
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            Stack Overflow
+        
+
+
+
+help
+chat
+
+
+
+
+
+
+
+
+
+            Meta Stack Overflow
+        
+
+
+
+
+
+
+your communities            
+
+
+
+Sign up or log in to customize your list.                
+
+
+more stack exchange communities
+
+company blog
+
+
+
+
+
+
+
+
+Log in
+
+Sign up
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    Home
+                
+
+
+
+
+
+Public
+
+
+ Questions
+
+
+
+
+
+
+                    Tags
+                
+
+
+
+
+
+
+
+                    Users
+                
+
+
+
+
+
+
+
+                    Companies
+                
+
+
+
+
+
+Collectives
+
+
+
+
+
+
+
+
+
+ Explore Collectives
+
+
+
+
+
+Teams
+
+Stack Overflow for Teams
+        – Start collaborating and sharing organizational knowledge.
+        
+        
+Create a free Team
+Why Teams?
+
+
+
+Teams
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    Create free Team
+                
+
+
+
+
+
+
+
+
+
+
+Collectives™ on Stack Overflow
+Find centralized, trusted content and collaborate around the technologies you use most.
+
+                    Learn more about Collectives
+                
+
+
+
+
+
+Teams
+Q&A for work
+Connect and share knowledge within a single location that is structured and easy to search.
+
+                    Learn more about Teams
+                
+
+
+
+
+
+
+
+
+
+
+
+Error 422 Unprocessable Entity - Rails API VueJS From
+
+
+        Ask Question
+    
+
+
+
+
+Asked
+4 years, 3 months ago
+
+
+Modified
+4 years, 3 months ago
+
+
+Viewed
+                        3k times
+                    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            0
+        
+
+
+
+
+
+
+
+
+
+
+
+
+I'm trying to create a new user through a vuejs form. I'm using a Rails API for the backend.
+I'm using gem knock and gem bcrypt for JWT authorisation.
+When I submit the form, I am getting a 422 error in the terminal. Something I've noticed is that it looks like it's trying to process this as HTML, and not json.
+Started POST "/api/v1/users" for 127.0.0.1 at 2019-02-17 21:18:05 +0000
+Processing by Api::V1::UsersController#create as HTML
+  Parameters: {"email"=>"ui@gmail.com", "password"=>"[FILTERED]", "user"=>{"email"=>"ui@gmail.com"}}
+Completed 422 Unprocessable Entity in 10ms (Views: 0.9ms | ActiveRecord: 0.0ms | Allocations: 576)
+
+When using Insomnia, I'm able to create new user perfectly fine, which is leading me to focus on the frontend being the problem.
+Further, when I remove has_secure_password from the user model, the form submits with succeeded 200, albeit without a password. 
+So why is the password playing up here?
+createuser.vue
+<template>
+  <div class="card-container">
+    <div class="signup">
+      <form @submit.stop.prevent="newUser">
+        <input id="email" v-model="email" type ="text" name="email" class="input">
+        <input id="password" v-model="password" type="password" name="password" class="input">
+        <input type="submit" value="Submit" class="btn-update">
+      </form>
+    </div>
+  </div>
+</template>
+<script>
+import axios from 'axios'
+export default {
+  data() {
+      return {
+          email: '',
+          password: '',
+          errors: []
+      }
+  },
+
+  methods: {
+
+  newUser() {
+    axios.post('http://localhost:3001/api/v1/users', {
+        email: this.email,
+        password: this.password
+      })
+      .then(res => (this.user = res.data))
+      .catch((error) => {
+        console.log(error)
+      });
+  },
+  }
+};
+
+</script>
+<style>
+
+</style>
+
+routes.rb
+Rails.application.routes.draw do
+
+  namespace :api do
+    namespace :v1 do
+      post 'user_token' => 'user_token#create'
+      resources :users
+      resources :posts
+      #post   '/users/create'   => 'users#create' not making a difference
+      #get    '/users/current'  => 'users#current'
+    end
+   end
+end
+
+users_controller.rb
+class Api::V1::UsersController < ApplicationController
+    before_action :authenticate_user,  only: [:index, :current, :update]
+
+    def index 
+        render json: User.all, status: 200
+    end
+
+    # Call this method to check if the user is logged-in.
+    # If the user is logged-in we will return the user's information.
+    def current
+        current_user.update!(last_login: Time.now)
+        render json: current_user
+    end
+
+    #def show
+    #   @user = User.find(params[:id])
+    #
+    #    render json: User.find(params[:id]), status: 200
+    #end
+
+    def create
+        user = User.new(user_params)
+
+        if user.save
+            render json: user, status: :created, location: user
+        else
+            render json: user.errors, status: :unprocessable_entity
+        end
+    end
+
+    def update
+        if @user.update(user_params)
+          render :show, status: :ok, location: @user
+        else
+          render json: @user.errors, status: :unprocessable_entity
+        end
+    end
+
+    def destroy
+        @user.destroy
+    end
+
+private
+    def set_user
+        @user = User.find(params[:id])
+    end
+
+    def user_params
+        params.require(:user).permit(:email, :password, :avatar)
+    end
+end
+
+UPDATE
+I've added a default option to the API namespace.
+namespace :api, defaults: {format: :json}
+This has 'corrected' the processing as JSON:
+Processing by Api::V1::UsersController#create as JSON
+
+But I still get 422 Code.
+
+
+
+
+ruby-on-railsvue.jsjwt
+
+
+
+
+
+
+
+
+
+Share
+
+
+Improve this question
+
+
+
+                    Follow
+                
+
+
+
+
+
+
+
+
+edited Feb 18, 2019 at 0:07
+
+
+
+
+Simon Cooper
+
+
+
+
+
+
+
+
+        asked Feb 17, 2019 at 21:32
+
+
+
+
+
+Simon CooperSimon Cooper
+
+1,57444 gold badges2424 silver badges5252 bronze badges
+
+
+
+
+
+
+
+1
+
+
+
+
+
+
+
+
+
+
+You are logging the error response on the browser, in axios carch. You should look in  response.data for error reporting, according to your create method.
+
+– Ruby Racer
+
+Feb 18, 2019 at 0:48
+
+
+
+
+
+
+Add a comment
+ | 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        1 Answer
+                                    1
+
+
+
+
+
+
+            Sorted by:
+        
+
+            Reset to default
+        
+
+
+
+
+                        Highest score (default)
+                    
+
+                        Trending (recent votes count more)
+                    
+
+                        Date modified (newest first)
+                    
+
+                        Date created (oldest first)
+                    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            0
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+You need to wrap post data in user object
+{
+  "user":
+  {
+    "email": "user@example.com",
+    "password": "password"
+  }
+}
+
+You can change your request
+axios.post('http://localhost:3001/api/v1/users', {
+    user: {
+      email: this.email,
+      password: this.password
+    }
+  })
+  .then(res => (this.user = res.data))
+  .catch((error) => {
+    console.log(error)
+  });
+
+
+
+
+
+
+
+
+
+Share
+
+
+Improve this answer
+
+
+
+                    Follow
+                
+
+
+
+
+
+
+
+
+        answered Feb 18, 2019 at 4:05
+
+
+
+
+
+ittusittus
+
+21.5k55 gold badges5353 silver badges5555 bronze badges
+
+
+
+
+
+
+
+0
+
+
+
+
+
+
+Add a comment
+ | 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                    Your Answer
+                                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Thanks for contributing an answer to Stack Overflow!Please be sure to answer the question. Provide details and share your research!But avoid …Asking for help, clarification, or responding to other answers.Making statements based on opinion; back them up with references or personal experience.To learn more, see our tips on writing great answers.
+
+
+
+
+
+
+Draft saved
+Draft discarded
+
+
+
+
+
+
+
+
+
+
+
+
+Sign up or log in
+
+
+ Sign up using Google
+                        
+
+ Sign up using Facebook
+                        
+
+ Sign up using Email and Password
+                        
+
+
+
+Submit
+
+Post as a guest
+
+
+Name
+
+
+
+
+
+
+
+
+
+Email
+Required, but never shown
+
+
+
+
+
+
+
+
+
+
+
+
+Post as a guest
+
+
+Name
+
+
+
+
+
+
+
+
+
+Email
+Required, but never shown
+
+
+
+
+
+
+
+
+
+
+
+                                            Post Your Answer
+                                        
+
+                                            Discard
+                                        
+
+                                                By clicking “Post Your Answer”, you agree to our terms of service and acknowledge that you have read and understand our privacy policy and code of conduct.
+
+
+
+
+
+
+Not the answer you're looking for? Browse other questions tagged ruby-on-railsvue.jsjwt or ask your own question.                                
+
+
+
+
+
+
+
+                            The Overflow Blog
+                        
+
+
+ 
+
+MosaicML: Deep learning models for sale, all shapes and sizes (Ep. 577)
+
+
+
+
+ 
+
+Self-healing code is the future of software development
+
+
+
+                            Featured on Meta
+                        
+
+
+ 
+
+We are graduating the updated button styling for vote arrows
+
+
+
+
+ 
+
+Statement from SO: June 5, 2023 Moderator Action
+
+
+
+
+ 
+
+Does the policy change for AI-generated content affect users who (want to)...
+
+
+
+
+ 
+
+Temporary policy: ChatGPT is banned
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Related
+
+
+
+17
+
+JWT authentication with Vue.js
+
+
+
+1
+
+Laravel normal login with vuejs using axios returns error Request failed with status code 422
+
+
+
+0
+
+Rails fails with Vue
+
+
+
+0
+
+Laravel reports a 400 (Bad request; Token not provided) in my VueJS + JWT-driven system
+
+
+
+0
+
+VueJS/Laravel - vue-resource allways gives status 419 on post request
+
+
+
+2
+
+laravel 419 (unknown status)
+
+
+
+1
+
+jwt-auth token has expired
+
+
+
+0
+
+Completed 422 Unprocessable_entity when sending form to Rails Api from Vuejs App
+
+
+
+1
+
+Vuejs Axios Request
+
+
+
+1
+
+400 Bad Request issue with POST request from my Vue app to my Rails API
+
+
+
+
+
+
+
+            Hot Network Questions
+        
+
+
+
+
+                    Is it possible to determine a maximum L/D possible
+                
+
+
+
+                    What award can an unpaid independent contractor expect? What are the legal incentives to pay contractors?
+                
+
+
+
+                    Contradictory references from my two PhD supervisors
+                
+
+
+
+                    Randomness in generative language models
+                
+
+
+
+                    What is the best way to set up multiple operating systems on a retro PC?
+                
+
+
+
+                    SQL Server merge datetime rows in one row and splits when values of other columns change
+                
+
+
+
+                    Are "pro-gun" states lax about enforcing "felon in possession" laws?
+                
+
+
+
+                    Moderation strike: a tired lunatic (4)
+                
+
+
+
+                    Did anybody use PCBs as macro-scale mask-ROMS?
+                
+
+
+
+                    13 figures OK, 14 figures gives ! LaTeX Error: Counter too large. only with tex4ht and subfigure
+                
+
+
+
+                    Is there a general theory of intelligence and design that would allow us to detect the presence of design in an object based solely on its properties?
+                
+
+
+
+                    Does touch ups painting (adding paint on a previously painted wall with the exact same paint) create noticeable marks between old and new?
+                
+
+
+
+                    How to have the same material applied on multiple objects, but control the material parameters for each object individually?
+                
+
+
+
+                    Why do secured bonds have less default risk than unsecured bonds?
+                
+
+
+
+                    When should I use the different types of why and because in German?
+                
+
+
+
+                    Can we apply stepwise forward or backward variables selection in negative binomial regression in SPSS?
+                
+
+
+
+                    Why is C++20's `std::popcount` restricted to unsigned types?
+                
+
+
+
+                    Can you aid and abet a crime against yourself?
+                
+
+
+
+                    Clip grid to extent of map in QGIS in Layout View
+                
+
+
+
+                    Excessive Demands Prior to Start Date
+                
+
+
+
+                    tmux: why is my pane name forcibly suffixed with a "Z" char?
+                
+
+
+
+                    Is 'infodumping' the important parts of a story via an in-universe lesson in school/documentary/the news/other educational medium bad storytelling?
+                
+
+
+
+                    What 'specific legal meaning' does the word "strike" have?
+                
+
+
+
+                    Construct mesh from a point cloud
+                
+
+
+
+            more hot questions
+        
+
+
+
+
+            Question feed
+        
+
+
+
+
+                Subscribe to RSS
+            
+
+
+
+                        Question feed
+                        To subscribe to this RSS feed, copy and paste this URL into your RSS reader.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+lang-js
+
+
+
+
+
+
+
+
+
+
+
+Stack Overflow
+
+Questions
+Help
+
+
+
+Products
+
+Teams
+Advertising
+Collectives
+Talent
+
+
+
+Company
+
+About
+Press
+Work Here
+Legal
+Privacy Policy
+Terms of Service
+Contact Us
+Cookie Settings
+Cookie Policy
+
+
+
+
+Stack Exchange Network
+
+
+
+                                    Technology
+                                
+
+
+
+                                    Culture & recreation
+                                
+
+
+
+                                    Life & arts
+                                
+
+
+
+                                    Science
+                                
+
+
+
+                                    Professional
+                                
+
+
+
+                                    Business
+                                
+
+
+
+                                    API
+                                
+
+
+
+                                    Data
+                                
+
+
+
+
+
+
+
+Blog
+Facebook
+Twitter
+LinkedIn
+Instagram
+
+
+Site design / logo © 2023 Stack Exchange Inc; user contributions licensed under CC BY-SA.                    rev 2023.6.8.43484
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        Your privacy
+                    
+
+                        By clicking “Accept all cookies”, you agree Stack Exchange can store cookies on your device and disclose information in accordance with our Cookie Policy.
+                    
+
+
+                            Accept all cookies
+                        
+
+                            Necessary cookies only
+                        
+
+
+
+                            Customize settings
+                        
+
+
+
+
+
+ 
+
+
+
